@@ -58,6 +58,7 @@ func (i item) FilterValue() string { return i.title }
 type testResultMsg runner.Result
 type tutorMsg string
 type errMsg string
+type editorFinishedMsg struct{ err error }
 
 type Model struct {
 	list     list.Model
@@ -172,6 +173,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = outputView
 		m.viewport.SetContent(fmt.Sprintf("Error:\n\n%v", string(msg)))
 		return m, nil
+
+	case editorFinishedMsg:
+		debugLog("Received editorFinishedMsg. Error: %v", msg.err)
+		if msg.err != nil {
+			m.state = outputView
+			m.viewport.SetContent(fmt.Sprintf("Editor exited with error:\n\n%v", msg.err))
+		}
+		// Redraw list to ensure terminal is clean
+		return m, nil
 	}
 
 	if m.state == listView {
@@ -224,13 +234,12 @@ func openEditor(slug string) tea.Cmd {
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
+		// Ensure environment is passed (crucial for TERM, HOME, etc)
+		c.Env = os.Environ()
+
 		return tea.ExecProcess(c, func(err error) tea.Msg {
-			if err != nil {
-				debugLog("ExecProcess finished with error: %v", err)
-				return errMsg(fmt.Sprintf("Editor exited with error: %v", err))
-			}
-			debugLog("ExecProcess finished successfully")
-			return nil
+			debugLog("ExecProcess callback triggered. Error: %v", err)
+			return editorFinishedMsg{err}
 		})
 	}
 }
