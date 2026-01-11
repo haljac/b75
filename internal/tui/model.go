@@ -231,12 +231,12 @@ func openEditor(slug string) tea.Cmd {
 
 		debugLog("Starting editor process at %s/main.go", path)
 		c := exec.Command(editor, filepath.Join(path, "main.go"))
-		c.Stdin = os.Stdin
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		// Ensure environment is passed (crucial for TERM, HOME, etc)
+		// c.Stdin = os.Stdin
+		// c.Stdout = os.Stdout
+		// c.Stderr = os.Stderr
 		c.Env = os.Environ()
 
+		debugLog("Command created, calling ExecProcess")
 		return tea.ExecProcess(c, func(err error) tea.Msg {
 			debugLog("ExecProcess callback triggered. Error: %v", err)
 			return editorFinishedMsg{err}
