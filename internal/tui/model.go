@@ -48,6 +48,7 @@ func (i item) FilterValue() string { return i.title }
 
 type testResultMsg runner.Result
 type tutorMsg string
+type errMsg string
 
 type Model struct {
 	list     list.Model
@@ -154,6 +155,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tutorMsg:
 		m.viewport.SetContent(string(msg))
 		return m, nil
+
+	case errMsg:
+		m.state = outputView
+		m.viewport.SetContent(fmt.Sprintf("Error:\n\n%v", string(msg)))
+		return m, nil
 	}
 
 	if m.state == listView {
@@ -179,12 +185,12 @@ func (m Model) View() string {
 func openEditor(slug string) tea.Cmd {
 	return func() tea.Msg {
 		if err := workspace.EnsureProblem(slug); err != nil {
-			return nil
+			return errMsg(fmt.Sprintf("Failed to setup problem: %v", err))
 		}
 
 		path, err := workspace.GetProblemPath(slug)
 		if err != nil {
-			return nil
+			return errMsg(fmt.Sprintf("Failed to get path: %v", err))
 		}
 
 		editor := os.Getenv("EDITOR")
@@ -192,11 +198,18 @@ func openEditor(slug string) tea.Cmd {
 			editor = "vim"
 		}
 
-		c := exec.Command(editor, path+"/main.go")
+		if _, err := exec.LookPath(editor); err != nil {
+			return errMsg(fmt.Sprintf("Editor '%s' not found. Please set $EDITOR or install vim.", editor))
+		}
+
+		c := exec.Command(editor, filepath.Join(path, "main.go"))
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		return tea.ExecProcess(c, func(err error) tea.Msg {
+			if err != nil {
+				return errMsg(fmt.Sprintf("Editor exited with error: %v", err))
+			}
 			return nil
 		})
 	}
