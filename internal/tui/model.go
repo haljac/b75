@@ -19,6 +19,15 @@ import (
 	"github.com/haljac/b75/internal/workspace"
 )
 
+func debugLog(format string, args ...interface{}) {
+	f, err := os.OpenFile("debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, time.Now().Format(time.RFC3339)+": "+format+"\n", args...)
+}
+
 var (
 	docStyle      = lipgloss.NewStyle().Margin(1, 2)
 	outputStyle   = lipgloss.NewStyle().Margin(1, 2).Border(lipgloss.NormalBorder()).Padding(0, 1)
@@ -116,8 +125,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "enter", "e":
 			i, ok := m.list.SelectedItem().(item)
+			debugLog("Enter pressed. Selected: %v, OK: %v", i.title, ok)
 			if ok {
 				return m, openEditor(i.slug)
+			} else {
+				debugLog("Type assertion failed for selected item")
 			}
 		case "t":
 			i, ok := m.list.SelectedItem().(item)
@@ -184,12 +196,15 @@ func (m Model) View() string {
 
 func openEditor(slug string) tea.Cmd {
 	return func() tea.Msg {
+		debugLog("openEditor called for %s", slug)
 		if err := workspace.EnsureProblem(slug); err != nil {
+			debugLog("EnsureProblem failed: %v", err)
 			return errMsg(fmt.Sprintf("Failed to setup problem: %v", err))
 		}
 
 		path, err := workspace.GetProblemPath(slug)
 		if err != nil {
+			debugLog("GetProblemPath failed: %v", err)
 			return errMsg(fmt.Sprintf("Failed to get path: %v", err))
 		}
 
@@ -197,19 +212,24 @@ func openEditor(slug string) tea.Cmd {
 		if editor == "" {
 			editor = "vim"
 		}
+		debugLog("Using editor: %s", editor)
 
 		if _, err := exec.LookPath(editor); err != nil {
+			debugLog("LookPath failed: %v", err)
 			return errMsg(fmt.Sprintf("Editor '%s' not found. Please set $EDITOR or install vim.", editor))
 		}
 
+		debugLog("Starting editor process at %s/main.go", path)
 		c := exec.Command(editor, filepath.Join(path, "main.go"))
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		return tea.ExecProcess(c, func(err error) tea.Msg {
 			if err != nil {
+				debugLog("ExecProcess finished with error: %v", err)
 				return errMsg(fmt.Sprintf("Editor exited with error: %v", err))
 			}
+			debugLog("ExecProcess finished successfully")
 			return nil
 		})
 	}

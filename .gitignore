@@ -1,5 +1,5 @@
 # Binaries
-/b75
+b75
 *.exe
 *.exe~
 *.dll
@@ -11,6 +11,9 @@
 
 # Output of the go coverage tool
 *.out
+
+# Logs
+*.log
 
 # Temporary directories
 temp/
