@@ -1,0 +1,32 @@
+# Binaries
+/b75
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Temporary directories
+temp/
+temp_test_home/
+tmp/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Project specific
+opencode.json
